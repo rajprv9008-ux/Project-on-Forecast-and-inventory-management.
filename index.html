@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Demand Planning & Forecasting Tool — Upload sales data, generate forecasts, track KPIs, and plan inventory with an intuitive SaaS-style dashboard.">
+    <title>DemandFlow — Demand Planning & Forecasting</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Lucide Icons (CDN) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <!-- App Styles -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+    <!--===================== LOGIN OVERLAY =====================-->
+    <div class="login-overlay" id="loginOverlay">
+        <div class="login-card">
+            <div class="login-logo">
+                <div class="logo-icon"><i data-lucide="bar-chart-3"></i></div>
+                <span class="logo-text">DemandFlow</span>
+            </div>
+            <h2 class="login-title">Sign In</h2>
+            <p class="login-subtitle">Enter your credentials to access the dashboard</p>
+            <form id="loginForm" class="login-form" autocomplete="off">
+                <div class="login-field">
+                    <label for="loginEmail">Email / Username</label>
+                    <div class="login-input-wrap">
+                        <i data-lucide="mail"></i>
+                        <input type="text" id="loginEmail" placeholder="Email / Username" required autocomplete="username">
+                    </div>
+                </div>
+                <div class="login-field">
+                    <label for="loginPassword">Password</label>
+                    <div class="login-input-wrap">
+                        <i data-lucide="lock"></i>
+                        <input type="password" id="loginPassword" placeholder="••••••••" required autocomplete="current-password">
+                    </div>
+                </div>
+                <div class="login-error" id="loginError" style="display:none;"></div>
+                <button type="submit" class="btn btn-primary login-submit"><i data-lucide="log-in"></i> Sign In</button>
+            </form>
+
+        </div>
+    </div>
+
+    <!--===================== USER MANAGEMENT MODAL =====================-->
+    <div class="modal-overlay" id="userMgmtModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2><i data-lucide="users"></i> User Management</h2>
+                <button class="btn-icon-danger" id="closeUserMgmt" aria-label="Close"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-section">
+                    <h3>Add New User</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+                        <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;"></i> 
+                        <strong>Static Site Notice:</strong> Users added via this form are only saved on <strong>this specific device</strong>. To add a user that works permanently across all devices, you must still edit the <code>REGISTERED_USERS</code> array in <code>js/app.js</code> and re-upload.
+                    </p>
+                    <form id="addUserForm" class="add-user-form">
+                        <div class="add-user-row">
+                            <div class="login-input-wrap">
+                                <i data-lucide="mail"></i>
+                                <input type="email" id="newUserEmail" placeholder="user@example.com" required>
+                            </div>
+                            <div class="login-input-wrap">
+                                <i data-lucide="lock"></i>
+                                <input type="password" id="newUserPassword" placeholder="Password" required minlength="4">
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-sm"><i data-lucide="user-plus"></i> Add</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-section">
+                    <h3>Registered Users</h3>
+                    <div class="table-wrapper">
+                        <table class="data-table" id="userListTable">
+                            <thead>
+                                <tr>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="userListBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!--===================== SIDEBAR =====================-->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <div class="logo-icon">
+                    <i data-lucide="bar-chart-3"></i>
+                </div>
+                <span class="logo-text">DemandFlow</span>
+            </div>
+            <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+                <i data-lucide="panel-left-close"></i>
+            </button>
+        </div>
+
+        <nav class="sidebar-nav">
+            <ul>
+                <li>
+                    <a href="#" class="nav-link active" data-section="dashboard" id="nav-dashboard">
+                        <i data-lucide="layout-dashboard"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="nav-link" data-section="data-input" id="nav-data-input">
+                        <i data-lucide="upload"></i>
+                        <span>Data Input</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="nav-link" data-section="forecasting" id="nav-forecasting">
+                        <i data-lucide="trending-up"></i>
+                        <span>Forecasting</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="nav-link" data-section="demand-drivers" id="nav-demand-drivers">
+                        <i data-lucide="sliders-horizontal"></i>
+                        <span>Demand Drivers</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="nav-link" data-section="inventory" id="nav-inventory">
+                        <i data-lucide="warehouse"></i>
+                        <span>Inventory</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="nav-link" data-section="what-if" id="nav-what-if">
+                        <i data-lucide="flask-conical"></i>
+                        <span>What-If Analysis</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="sidebar-footer-info">
+                <i data-lucide="info"></i>
+                <span>v1.0 · Client-side only</span>
+            </div>
+        </div>
+    </aside>
+
+    <!--===================== MAIN CONTENT =====================-->
+    <main class="main-content" id="mainContent">
+
+        <!-- Top Bar -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Open menu">
+                    <i data-lucide="menu"></i>
+                </button>
+                <h1 class="page-title" id="pageTitle">Dashboard</h1>
+            </div>
+            <div class="topbar-right">
+                <button class="btn btn-outline btn-sm" id="exportCsvBtn" title="Export data to CSV">
+                    <i data-lucide="download"></i>
+                    <span>Export CSV</span>
+                </button>
+                <div class="topbar-user-area" id="topbarUserArea">
+                    <div class="topbar-avatar" title="User">
+                        <i data-lucide="user-circle"></i>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- ============ SECTION: DASHBOARD ============ -->
+        <section class="content-section active" id="section-dashboard">
+
+            <!-- KPI Cards -->
+            <div class="kpi-row" id="kpiRow">
+                <div class="kpi-card" id="kpi-total-sales">
+                    <div class="kpi-icon blue"><i data-lucide="shopping-cart"></i></div>
+                    <div class="kpi-body">
+                        <span class="kpi-label">Total Sales</span>
+                        <span class="kpi-value" id="kpiTotalSales">—</span>
+                    </div>
+                </div>
+                <div class="kpi-card" id="kpi-avg-forecast">
+                    <div class="kpi-icon purple"><i data-lucide="target"></i></div>
+                    <div class="kpi-body">
+                        <span class="kpi-label">Avg Forecast</span>
+                        <span class="kpi-value" id="kpiAvgForecast">—</span>
+                    </div>
+                </div>
+                <div class="kpi-card" id="kpi-mape">
+                    <div class="kpi-icon amber"><i data-lucide="percent"></i></div>
+                    <div class="kpi-body">
+                        <span class="kpi-label">MAPE</span>
+                        <span class="kpi-value" id="kpiMape">—</span>
+                    </div>
+                </div>
+                <div class="kpi-card" id="kpi-bias">
+                    <div class="kpi-icon teal"><i data-lucide="scale"></i></div>
+                    <div class="kpi-body">
+                        <span class="kpi-label">Bias</span>
+                        <span class="kpi-value" id="kpiBias">—</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Row -->
+            <div class="charts-row">
+                <div class="card chart-card" id="salesForecastChartCard">
+                    <div class="card-header">
+                        <h2>Sales vs Forecast</h2>
+                        <select class="select-sm" id="dashSkuSelect">
+                            <option value="__all__">All SKUs</option>
+                        </select>
+                    </div>
+                    <div class="card-body chart-wrapper">
+                        <canvas id="salesForecastChart"></canvas>
+                    </div>
+                </div>
+                <div class="card chart-card" id="stockLevelsChartCard">
+                    <div class="card-header">
+                        <h2>Stock Levels</h2>
+                    </div>
+                    <div class="card-body chart-wrapper">
+                        <canvas id="stockLevelsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alerts / Quick Glance -->
+            <div class="card" id="alertsSummaryCard">
+                <div class="card-header">
+                    <h2>Inventory Alerts</h2>
+                </div>
+                <div class="card-body" id="dashAlerts">
+                    <p class="empty-state"><i data-lucide="inbox"></i> Upload data to see inventory alerts.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ SECTION: DATA INPUT ============ -->
+        <section class="content-section" id="section-data-input">
+            <div class="section-intro">
+                <h2>Data Input</h2>
+                <p>Upload your sales and stock data separately using the panels below. Data is linked by <code>SKU</code>.</p>
+            </div>
+
+            <!-- Data Upload Status Indicators -->
+            <div class="data-status-row" id="dataStatusRow">
+                <div class="data-status-chip" id="salesStatusChip">
+                    <i data-lucide="alert-circle"></i>
+                    <span>Sales Data: Not Loaded</span>
+                </div>
+                <div class="data-status-chip" id="stockStatusChip">
+                    <i data-lucide="alert-circle"></i>
+                    <span>Stock Data: Not Loaded</span>
+                </div>
+            </div>
+
+            <!-- ───── SALES DATA PANEL ───── -->
+            <div class="card upload-panel" id="salesUploadPanel">
+                <div class="card-header">
+                    <h2><i data-lucide="shopping-cart"></i> Sales Data</h2>
+                    <div class="chip-info">Columns: <code>SKU</code>, <code>Product Name</code>, <code>Date</code>, <code>Sold Qty</code></div>
+                </div>
+                <div class="card-body">
+                    <p class="tab-desc">Copy sales data from your spreadsheet and paste below. First row must be the header.</p>
+                    <textarea id="salesPasteArea" class="csv-textarea" rows="8" spellcheck="false" placeholder="SKU,Product Name,Date,Sold Qty
+SKU-A100,Widget Alpha,2024-01-01,120
+SKU-A100,Widget Alpha,2024-02-01,135
+SKU-B200,Gadget Beta,2024-01-01,85
+..."></textarea>
+                    <div class="paste-actions">
+                        <button class="btn btn-primary" id="loadSalesPastedBtn">
+                            <i data-lucide="check"></i> Load Sales Data
+                        </button>
+                        <button class="btn btn-outline" id="fillSampleSalesBtn">
+                            <i data-lucide="file-text"></i> Fill Sample
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Sales Data Table -->
+                <div class="upload-panel-table" id="salesTableCard" style="display:none;">
+                    <div class="card-header">
+                        <h2>Sales Data <span class="badge" id="salesRowCount">0 rows</span></h2>
+                        <div class="card-actions">
+                            <button class="btn btn-sm btn-danger" id="clearSalesBtn"><i data-lucide="trash-2"></i> Clear</button>
+                        </div>
+                    </div>
+                    <div class="card-body table-wrapper">
+                        <table class="data-table" id="salesDataTable">
+                            <thead>
+                                <tr>
+                                    <th>SKU</th>
+                                    <th>Product Name</th>
+                                    <th>Date</th>
+                                    <th>Sold Qty</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="salesTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ───── STOCK DATA PANEL ───── -->
+            <div class="card upload-panel" id="stockUploadPanel">
+                <div class="card-header">
+                    <h2><i data-lucide="warehouse"></i> Stock Data</h2>
+                    <div class="chip-info">Columns: <code>SKU</code>, <code>Product Name</code>, <code>Qty</code></div>
+                </div>
+                <div class="card-body">
+                    <p class="tab-desc">Copy stock / inventory data from your spreadsheet and paste below. First row must be the header.</p>
+                    <textarea id="stockPasteArea" class="csv-textarea" rows="6" spellcheck="false" placeholder="SKU,Product Name,Qty
+SKU-A100,Widget Alpha,400
+SKU-B200,Gadget Beta,150
+SKU-C300,Super Charger,800
+..."></textarea>
+                    <div class="paste-actions">
+                        <button class="btn btn-primary" id="loadStockPastedBtn">
+                            <i data-lucide="check"></i> Load Stock Data
+                        </button>
+                        <button class="btn btn-outline" id="fillSampleStockBtn">
+                            <i data-lucide="file-text"></i> Fill Sample
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Stock Data Table -->
+                <div class="upload-panel-table" id="stockTableCard" style="display:none;">
+                    <div class="card-header">
+                        <h2>Stock Data <span class="badge" id="stockRowCount">0 rows</span></h2>
+                        <div class="card-actions">
+                            <button class="btn btn-sm btn-danger" id="clearStockBtn"><i data-lucide="trash-2"></i> Clear</button>
+                        </div>
+                    </div>
+                    <div class="card-body table-wrapper">
+                        <table class="data-table" id="stockDataTable">
+                            <thead>
+                                <tr>
+                                    <th>SKU</th>
+                                    <th>Product Name</th>
+                                    <th>Qty</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="stockTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Merged Data Preview -->
+            <div class="card" id="mergedDataCard" style="display:none;">
+                <div class="card-header">
+                    <h2><i data-lucide="git-merge"></i> Merged Data Preview <span class="badge" id="mergedRowCount">0 rows</span></h2>
+                </div>
+                <div class="card-body table-wrapper">
+                    <table class="data-table" id="mergedDataTable">
+                        <thead>
+                            <tr>
+                                <th>SKU</th>
+                                <th>Product Name</th>
+                                <th>Date</th>
+                                <th>Sales</th>
+                                <th>Stock</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mergedTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Sample Data Btn -->
+            <div class="sample-data-bar">
+                <button class="btn btn-ghost" id="loadSampleBtn"><i data-lucide="database"></i> Load sample data (both sales & stock) to try it out</button>
+            </div>
+        </section>
+
+        <!-- ============ SECTION: FORECASTING ============ -->
+        <section class="content-section" id="section-forecasting">
+            <div class="section-intro">
+                <h2>Forecasting Engine</h2>
+                <p>Generate demand forecasts per SKU using Moving Average or Weighted Average methods.</p>
+            </div>
+
+            <!-- Method Toggle -->
+            <div class="card" id="forecastSettingsCard">
+                <div class="card-body flex-row-center">
+                    <span class="toggle-label">Forecast Method:</span>
+                    <div class="toggle-group" id="forecastMethodToggle">
+                        <button class="toggle-btn active" data-method="ma">Moving Average (3)</button>
+                        <button class="toggle-btn" data-method="wa">Weighted Average</button>
+                    </div>
+                    <button class="btn btn-primary" id="runForecastBtn"><i data-lucide="play"></i> Run Forecast</button>
+                </div>
+            </div>
+
+            <!-- Forecast Results Table -->
+            <div class="card" id="forecastResultsCard" style="display:none;">
+                <div class="card-header">
+                    <h2>Forecast Results</h2>
+                </div>
+                <div class="card-body table-wrapper">
+                    <table class="data-table" id="forecastTable">
+                        <thead>
+                            <tr>
+                                <th>SKU</th>
+                                <th>Product Name</th>
+                                <th>Last 3 Sales</th>
+                                <th>Forecast</th>
+                                <th>Method</th>
+                            </tr>
+                        </thead>
+                        <tbody id="forecastTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Forecast KPIs -->
+            <div class="kpi-row small" id="forecastKpiRow" style="display:none;">
+                <div class="kpi-card">
+                    <div class="kpi-icon amber"><i data-lucide="percent"></i></div>
+                    <div class="kpi-body">
+                        <span class="kpi-label">MAPE</span>
+                        <span class="kpi-value" id="forecastMape">—</span>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon teal"><i data-lucide="scale"></i></div>
+                    <div class="kpi-body">
+                        <span class="kpi-label">Bias</span>
+                        <span class="kpi-value" id="forecastBias">—</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ SECTION: DEMAND DRIVERS ============ -->
+        <section class="content-section" id="section-demand-drivers">
+            <div class="section-intro">
+                <h2>Demand Drivers</h2>
+                <p>Adjust forecasts dynamically by applying promotional uplift and seasonality factors.</p>
+            </div>
+
+            <div class="drivers-grid">
+                <div class="card driver-card" id="promotionCard">
+                    <div class="card-header"><h2><i data-lucide="megaphone"></i> Promotion Uplift</h2></div>
+                    <div class="card-body">
+                        <label for="promotionSlider" class="driver-label">Uplift Percentage</label>
+                        <div class="slider-row">
+                            <input type="range" id="promotionSlider" min="0" max="100" value="0" step="1">
+                            <span class="slider-value" id="promotionValue">0%</span>
+                        </div>
+                        <p class="driver-hint">Increase forecast by a percentage to reflect upcoming promotions.</p>
+                    </div>
+                </div>
+                <div class="card driver-card" id="seasonalityCard">
+                    <div class="card-header"><h2><i data-lucide="sun-snow"></i> Seasonality Factor</h2></div>
+                    <div class="card-body">
+                        <label for="seasonalitySlider" class="driver-label">Multiplier</label>
+                        <div class="slider-row">
+                            <input type="range" id="seasonalitySlider" min="0.5" max="2.0" value="1.0" step="0.05">
+                            <span class="slider-value" id="seasonalityValue">1.00×</span>
+                        </div>
+                        <p class="driver-hint">Multiply forecast by a seasonal factor (1.0 = no change).</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Adjusted Forecast Table -->
+            <div class="card" id="adjustedForecastCard" style="display:none;">
+                <div class="card-header"><h2>Adjusted Forecast</h2></div>
+                <div class="card-body table-wrapper">
+                    <table class="data-table" id="adjustedTable">
+                        <thead>
+                            <tr>
+                                <th>SKU</th>
+                                <th>Product Name</th>
+                                <th>Base Forecast</th>
+                                <th>Promo Uplift</th>
+                                <th>Seasonality</th>
+                                <th>Adjusted Forecast</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adjustedTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ SECTION: INVENTORY ============ -->
+        <section class="content-section" id="section-inventory">
+            <div class="section-intro">
+                <h2>Inventory Planning</h2>
+                <p>Evaluate stock levels against average demand and lead time to identify reorder points and alerts.</p>
+            </div>
+
+            <div class="card" id="leadTimeCard">
+                <div class="card-body flex-row-center">
+                    <label for="leadTimeInput" class="driver-label" style="margin:0;">Lead Time (days):</label>
+                    <input type="number" id="leadTimeInput" class="input-sm" min="1" max="90" value="7">
+                    <button class="btn btn-primary" id="calcInventoryBtn"><i data-lucide="calculator"></i> Calculate</button>
+                </div>
+            </div>
+
+            <!-- Inventory Table -->
+            <div class="card" id="inventoryTableCard" style="display:none;">
+                <div class="card-header"><h2>Inventory Status</h2></div>
+                <div class="card-body table-wrapper">
+                    <table class="data-table" id="inventoryTable">
+                        <thead>
+                            <tr>
+                                <th>SKU</th>
+                                <th>Product Name</th>
+                                <th>Avg Demand</th>
+                                <th>Current Stock</th>
+                                <th>Reorder Point</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventoryTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ SECTION: WHAT-IF ============ -->
+        <section class="content-section" id="section-what-if">
+            <div class="section-intro">
+                <h2>What-If Analysis</h2>
+                <p>Simulate demand changes and see the impact on forecasts and inventory in real time.</p>
+            </div>
+
+            <div class="card" id="whatIfSliderCard">
+                <div class="card-body">
+                    <label for="whatIfSlider" class="driver-label">Demand Adjustment</label>
+                    <div class="slider-row big">
+                        <span class="slider-min">−50%</span>
+                        <input type="range" id="whatIfSlider" min="-50" max="50" value="0" step="1">
+                        <span class="slider-max">+50%</span>
+                    </div>
+                    <div class="whatif-display">
+                        <span class="whatif-value" id="whatIfValue">0%</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="charts-row">
+                <div class="card chart-card" id="whatIfChartCard">
+                    <div class="card-header"><h2>Adjusted Forecast Comparison</h2></div>
+                    <div class="card-body chart-wrapper">
+                        <canvas id="whatIfChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" id="whatIfTableCard" style="display:none;">
+                <div class="card-header"><h2>Simulated Inventory Impact</h2></div>
+                <div class="card-body table-wrapper">
+                    <table class="data-table" id="whatIfTable">
+                        <thead>
+                            <tr>
+                                <th>SKU</th>
+                                <th>Product Name</th>
+                                <th>Original Forecast</th>
+                                <th>Adjusted Forecast</th>
+                                <th>Stock</th>
+                                <th>New Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="whatIfTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Toast container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Scripts -->
+    <script src="js/app.js"></script>
+</body>
+</html>
